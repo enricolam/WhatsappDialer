@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Dialer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .input-group > div {
+            flex: 1;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #country-code {
+            width: 100%;
+        }
+        #suggestions {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        #suggestions div {
+            padding: 5px;
+            cursor: pointer;
+        }
+        #suggestions div:hover {
+            background-color: #f0f0f0;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #25D366;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Dialer</h1>
+    <div class="input-group">
+        <div>
+            <label for="country-code">Country Code:</label>
+            <input type="text" id="country-code" placeholder="Code">
+            <div id="suggestions"></div>
+        </div>
+        <div>
+            <label for="phone-number">Phone Number:</label>
+            <input type="tel" id="phone-number" placeholder="Phone number">
+        </div>
+    </div>
+    <div class="input-group">
+        <div>
+            <label for="message">Message:</label>
+            <textarea id="message" placeholder="Enter your message (optional)"></textarea>
+        </div>
+    </div>
+    <button id="whatsapp-button" disabled>Open WhatsApp Chat</button>
+
+    <script>
+        const countryCodes = {
+  "1": "United States",
+  "7": "Russia",
+  "20": "Egypt",
+  "27": "South Africa",
+  "30": "Greece",
+  "31": "Netherlands",
+  "32": "Belgium",
+  "33": "France",
+  "34": "Spain",
+  "36": "Hungary",
+  "39": "Italy",
+  "40": "Romania",
+  "41": "Switzerland",
+  "43": "Austria",
+  "44": "Jersey",
+  "45": "Denmark",
+  "46": "Sweden",
+  "47": "Svalbard & Jan Mayen",
+  "48": "Poland",
+  "49": "Germany",
+  "51": "Peru",
+  "52": "Mexico",
+  "53": "Cuba",
+  "54": "Argentina",
+  "55": "Brazil",
+  "56": "Chile",
+  "57": "Colombia",
+  "58": "Venezuela",
+  "60": "Malaysia",
+  "61": "Christmas Island",
+  "62": "Indonesia",
+  "63": "Philippines",
+  "64": "New Zealand",
+  "65": "Singapore",
+  "66": "Thailand",
+  "77": "Kazakhstan",
+  "81": "Japan",
+  "82": "South Korea",
+  "84": "Vietnam",
+  "86": "China",
+  "90": "Turkey",
+  "91": "India",
+  "92": "Pakistan",
+  "93": "Afghanistan",
+  "94": "Sri Lanka",
+  "95": "Myanmar (Burma)",
+  "98": "Iran",
+  "211": "South Sudan",
+  "212": "Morocco",
+  "213": "Algeria",
+  "216": "Tunisia",
+  "218": "Libya",
+  "220": "Gambia",
+  "221": "Senegal",
+  "222": "Mauritania",
+  "223": "Mali",
+  "224": "Guinea",
+  "225": "Côte d’Ivoire",
+  "226": "Burkina Faso",
+  "227": "Niger",
+  "228": "Togo",
+  "229": "Benin",
+  "230": "Mauritius",
+  "231": "Liberia",
+  "232": "Sierra Leone",
+  "233": "Ghana",
+  "234": "Nigeria",
+  "235": "Chad",
+  "236": "Central African Republic",
+  "237": "Cameroon",
+  "238": "Cape Verde",
+  "239": "São Tomé & Príncipe",
+  "240": "Equatorial Guinea",
+  "241": "Gabon",
+  "242": "Congo - Brazzaville",
+  "243": "Congo - Kinshasa",
+  "244": "Angola",
+  "245": "Guinea-Bissau",
+  "246": "British Indian Ocean Territory",
+  "248": "Seychelles",
+  "249": "Sudan",
+  "250": "Rwanda",
+  "251": "Ethiopia",
+  "252": "Somalia",
+  "253": "Djibouti",
+  "254": "Kenya",
+  "255": "Tanzania",
+  "256": "Uganda",
+  "257": "Burundi",
+  "258": "Mozambique",
+  "260": "Zambia",
+  "261": "Madagascar",
+  "262": "Mayotte",
+  "263": "Zimbabwe",
+  "264": "Namibia",
+  "265": "Malawi",
+  "266": "Lesotho",
+  "267": "Botswana",
+  "268": "Eswatini",
+  "269": "Comoros",
+  "290": "St. Helena",
+  "291": "Eritrea",
+  "297": "Aruba",
+  "298": "Faroe Islands",
+  "299": "Greenland",
+  "350": "Gibraltar",
+  "351": "Portugal",
+  "352": "Luxembourg",
+  "353": "Ireland",
+  "354": "Iceland",
+  "355": "Albania",
+  "356": "Malta",
+  "357": "Cyprus",
+  "358": "Finland",
+  "359": "Bulgaria",
+  "370": "Lithuania",
+  "371": "Latvia",
+  "372": "Estonia",
+  "373": "Moldova",
+  "374": "Armenia",
+  "375": "Belarus",
+  "376": "Andorra",
+  "377": "Monaco",
+  "378": "San Marino",
+  "379": "Vatican City",
+  "380": "Ukraine",
+  "381": "Serbia",
+  "382": "Montenegro",
+  "385": "Croatia",
+  "386": "Slovenia",
+  "387": "Bosnia & Herzegovina",
+  "389": "North Macedonia",
+  "420": "Czechia",
+  "421": "Slovakia",
+  "423": "Liechtenstein",
+  "500": "South Georgia & South Sandwich Islands",
+  "501": "Belize",
+  "502": "Guatemala",
+  "503": "El Salvador",
+  "504": "Honduras",
+  "505": "Nicaragua",
+  "506": "Costa Rica",
+  "507": "Panama",
+  "508": "St. Pierre & Miquelon",
+  "509": "Haiti",
+  "590": "St. Martin",
+  "591": "Bolivia",
+  "593": "Ecuador",
+  "594": "French Guiana",
+  "595": "Paraguay",
+  "596": "Martinique",
+  "597": "Suriname",
+  "598": "Uruguay",
+  "670": "Timor-Leste",
+  "672": "Norfolk Island",
+  "673": "Brunei",
+  "674": "Nauru",
+  "675": "Papua New Guinea",
+  "676": "Tonga",
+  "677": "Solomon Islands",
+  "678": "Vanuatu",
+  "679": "Fiji",
+  "680": "Palau",
+  "681": "Wallis & Futuna",
+  "682": "Cook Islands",
+  "683": "Niue",
+  "685": "Samoa",
+  "686": "Kiribati",
+  "687": "New Caledonia",
+  "688": "Tuvalu",
+  "689": "French Polynesia",
+  "690": "Tokelau",
+  "691": "Micronesia",
+  "692": "Marshall Islands",
+  "850": "North Korea",
+  "852": "Hong Kong SAR China",
+  "853": "Macao SAR China",
+  "855": "Cambodia",
+  "856": "Laos",
+  "872": "Pitcairn Islands",
+  "880": "Bangladesh",
+  "886": "Taiwan",
+  "960": "Maldives",
+  "961": "Lebanon",
+  "962": "Jordan",
+  "963": "Syria",
+  "964": "Iraq",
+  "965": "Kuwait",
+  "966": "Saudi Arabia",
+  "967": "Yemen",
+  "968": "Oman",
+  "970": "Palestinian Territories",
+  "971": "United Arab Emirates",
+  "972": "Israel",
+  "973": "Bahrain",
+  "974": "Qatar",
+  "975": "Bhutan",
+  "976": "Mongolia",
+  "977": "Nepal",
+  "992": "Tajikistan",
+  "993": "Turkmenistan",
+  "994": "Azerbaijan",
+  "995": "Georgia",
+  "996": "Kyrgyzstan",
+  "998": "Uzbekistan",
+  "1242": "Bahamas",
+  "1246": "Barbados",
+  "1264": "Anguilla",
+  "1268": "Antigua & Barbuda",
+  "1284": "British Virgin Islands",
+  "1340": "U.S. Virgin Islands",
+  "1441": "Bermuda",
+  "1473": "Grenada",
+  "1649": "Turks & Caicos Islands",
+  "1664": "Montserrat",
+  "1670": "Northern Mariana Islands",
+  "1671": "Guam",
+  "1684": "American Samoa",
+  "1758": "St. Lucia",
+  "1767": "Dominica",
+  "1784": "St. Vincent & Grenadines",
+  "1849": "Dominican Republic",
+  "1868": "Trinidad & Tobago",
+  "1869": "St. Kitts & Nevis",
+  "1876": "Jamaica",
+  "1939": "Puerto Rico",
+  "345": "Cayman Islands"
+};
+
+        const countryCodeInput = document.getElementById('country-code');
+        const phoneNumberInput = document.getElementById('phone-number');
+        const messageInput = document.getElementById('message');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const whatsappButton = document.getElementById('whatsapp-button');
+
+        countryCodeInput.addEventListener('input', function() {
+            const input = this.value;
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.style.display = 'none';
+
+            if (input) {
+                const matchingCodes = Object.keys(countryCodes).filter(code => code.startsWith(input));
+                if (matchingCodes.length > 0) {
+                    matchingCodes.forEach(code => {
+                        const div = document.createElement('div');
+                        div.textContent = `+${code} (${countryCodes[code]})`;
+                        div.addEventListener('click', function() {
+                            countryCodeInput.value = code;
+                            suggestionsDiv.style.display = 'none';
+                            validateInputs();
+                        });
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = 'block';
+                }
+            }
+            validateInputs();
+        });
+
+        phoneNumberInput.addEventListener('input', validateInputs);
+
+        function validateInputs() {
+            const countryCode = countryCodeInput.value.trim();
+            const phoneNumber = phoneNumberInput.value.trim();
+
+            let isValid = false;
+
+            if (countryCode && phoneNumber) {
+                const phoneRegex = getPhoneRegexForCountry(countryCode);
+                isValid = phoneRegex.test(phoneNumber);
+            }
+
+            whatsappButton.disabled = !isValid;
+        }
+
+        function getPhoneRegexForCountry(countryCode) {
+            // This is a simplified regex. In a real-world scenario, you'd want more specific regex patterns for each country.
+            switch (countryCode) {
+                case "1": // US
+                    return /^[2-9]\d{9}$/;
+                case "44": // UK
+                    return /^[1-9]\d{9}$/;
+                case "91": // India
+                    return /^[6-9]\d{9}$/;
+                default:
+                    return /^\d{5,14}$/; // Generic pattern for other countries
+            }
+        }
+
+        whatsappButton.addEventListener('click', function() {
+            const countryCode = countryCodeInput.value.trim();
+            const phoneNumber = phoneNumberInput.value.trim();
+            const message = encodeURIComponent(messageInput.value.trim());
+            const whatsappNumber = `${countryCode}${phoneNumber}`;
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+            window.open(whatsappUrl, '_blank');
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== countryCodeInput && e.target !== suggestionsDiv) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
